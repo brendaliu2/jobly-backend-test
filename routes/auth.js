@@ -37,6 +37,8 @@ router.post("/token", async function (req, res, next) {
 });
 
 
+
+
 /** POST /auth/register:   { user } => { token }
  *
  * user must include { username, password, firstName, lastName, email }
@@ -61,6 +63,22 @@ router.post("/register", async function (req, res, next) {
   const token = createToken(newUser);
   return res.status(201).json({ token });
 });
+
+router.post("/googleUser", async function (req, res, next){
+  const { username } = req.body;
+
+  try{
+    const user = await User.get(username);
+    const token = createToken(user);
+    return res.json({ token });
+
+  } catch (err) {
+    const user = await User.register({ ...req.body, isAdmin: false });
+    const token = createToken(newUser);
+    return res.status(201).json({ token });
+  }
+
+})
 
 
 module.exports = router;
