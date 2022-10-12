@@ -11,6 +11,8 @@ const { createToken } = require("../helpers/tokens");
 const userAuthSchema = require("../schemas/userAuth.json");
 const userRegisterSchema = require("../schemas/userRegister.json");
 const { BadRequestError } = require("../expressError");
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(process.env.CLIENT_ID);
 
 /** POST /auth/token:  { username, password } => { token }
  *
@@ -23,7 +25,7 @@ router.post("/token", async function (req, res, next) {
   const validator = jsonschema.validate(
     req.body,
     userAuthSchema,
-    {required: true}
+    { required: true }
   );
   if (!validator.valid) {
     const errs = validator.errors.map(e => e.stack);
@@ -52,7 +54,7 @@ router.post("/register", async function (req, res, next) {
   const validator = jsonschema.validate(
     req.body,
     userRegisterSchema,
-    {required: true}
+    { required: true }
   );
   if (!validator.valid) {
     const errs = validator.errors.map(e => e.stack);
@@ -64,21 +66,48 @@ router.post("/register", async function (req, res, next) {
   return res.status(201).json({ token });
 });
 
-router.post("/googleUser", async function (req, res, next){
-  const { username } = req.body;
+router.post("/google", async (req, res) => {
+  const { token } = req.body;
+  console.log(token);
+  const ticket = await client.verifyIdToken({
+    idToken: token,
+    audience: process.env.CLIENT_ID
+  });
+  const payload = ticket.getPayload();
 
-  try{
-    const user = await User.get(username);
+  try {
+    const user = await User.get(payload.email);
     const token = createToken(user);
     return res.json({ token });
 
   } catch (err) {
-    const user = await User.register({ ...req.body, isAdmin: false });
+    const userData = {
+      username: payload.email,
+      password: '123456',
+      firstName: payload.given_name,
+      lastName: payload.family_name,
+      email: payload.email
+    };
+    const user = await User.register({ ...userData, isAdmin: false });
     const token = createToken(user);
     return res.status(201).json({ token });
   }
+});
 
-})
+// router.post("/googleUser", async function (req, res, next){
+//   const { username } = req.body;
 
+//   try{
+//     const user = await User.get(username);
+//     const token = createToken(user);
+//     return res.json({ token });
+
+//   } catch (err) {
+//     const user = await User.register({ ...req.body, isAdmin: false });
+//     const token = createToken(user);
+//     return res.status(201).json({ token });
+//   }
+
+// })
 
 module.exports = router;
