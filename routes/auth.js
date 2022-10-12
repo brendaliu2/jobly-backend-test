@@ -74,7 +74,7 @@ router.post("/googleUser", async function (req, res, next){
 
   } catch (err) {
     const user = await User.register({ ...req.body, isAdmin: false });
-    const token = createToken(newUser);
+    const token = createToken(user);
     return res.status(201).json({ token });
   }
 
